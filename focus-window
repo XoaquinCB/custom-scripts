@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Required packages:
+#   wmctrl
+
+# Usage
+#   focus-window <F|s> title command
+#   focus-window <F|s> "multi-word title" "multi-word command"
+#
+#   F   "title" should match the window title exactly
+#   s   "title" is a case insensitive substring of the window title
+
+MODE=$1
+TITLE=$2
+COMMAND=$3
+
+function focus_window
+{
+    if [ $MODE = "F" ]
+    then
+      # Try to focus the window with the specified title exactly
+      wmctrl -Fa "$TITLE"
+    elif [ $MODE = "s" ]
+    then
+      # Try to focus the window with the specified title substring
+      wmctrl -a "$TITLE"
+    else
+      echo "'$MODE' is not a valid option. Use 'F' or 's'" > /dev/stderr
+      exit 1
+    fi
+}
+
+# Check that there are three arguments
+if [ $# -ne 3 ]
+then
+    echo "Incorrect number of arguments. Expected 3, but $# provided." > /dev/stderr
+    exit 1
+else
+  # Try to focus the window
+  focus_window
+
+  # If no window exists, run the command to open it, then focus it
+  if [ $? -ne 0 ]
+  then
+    # Run the command
+    $COMMAND &
+
+    # If command doesn't exist, print error
+    if [ $? -eq 127 ]
+    then
+      echo "Command '$COMMAND' was not found." > /dev/stderr
+      exit 1
+    fi
+    
+    # Record the PID of the command
+    PID=$!
+    
+    # Try to focus the window every second. Give up after 10 tries
+    COUNT=0
+    focus_window
+    while [ $? -ne 0 ] && [ $COUNT -lt 10 ]
+    do
+        COUNT=$((COUNT + 1))
+        sleep 1
+        
+        focus_window
+    done
+  fi
+fi
+
+# Wait for the process to finish
+wait $PID
