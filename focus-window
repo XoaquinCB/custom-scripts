@@ -2,10 +2,13 @@
 
 # Required packages:
 #   wmctrl
-
-# Usage
+#
+# Description:
+#   Focuses the window with a given title. If the window doesn't exist
+#   it runs a given command to open it, and then focuses it.
+#
+# Usage:
 #   focus-window <F|s> title command
-#   focus-window <F|s> "multi-word title" "multi-word command"
 #
 #   F   "title" should match the window title exactly
 #   s   "title" is a case insensitive substring of the window title
