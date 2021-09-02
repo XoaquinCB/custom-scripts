@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Required packages:
+#   arandr
+#   xrandr
+#
+# Description:
+#   Manages monitor layouts. This script can check what monitors are
+#   plugged in and apply a previously saved layout for that monitor
+#   setup.
+#
+# Usage:
+#   monitors
+#     Checks the current monitor setup and applies the appropriate layout.
+#     If a layout for the current setup doesn't exist, it opens arandr for
+#     the user to create a layout.
+#
+#   monitors <-m|--modify>
+#     Opens arandr with the current layout, allowing the user to modify it.
+#
+#   monitors <-s|--save>
+#     Saves the "current-layout.sh" file for the current monitor setup.
+#   
+# Using arandr:
+#   When you've finished modifying the layout in arandr, save it to
+#   ~/.screenlayout/current-layout.sh.
+#   To apply the layout use 'monitors -s'
+
+LAYOUTS_DIR="$HOME/.screenlayout"
+CURRENT_FILE="$HOME/.screenlayout/current-layout.sh"
+
+function decode-man-hex
+{
+    man_hex="0x$1"
+
+    utf8=$(printf "%02X%02X%02X" \
+        $((($man_hex >> 10 & 0x1F) + 64)) \
+        $((($man_hex >>  5 & 0x1F) + 64)) \
+        $((($man_hex >>  0 & 0x1F) + 64)))
+    
+    echo "$(xxd -r -p <<< "$utf8")"
+}
+
+function get-connected-layout
+{
+    while read -r man_hex model_hex; do
+        man="$(decode-man-hex $man_hex)"
+        model="$((16#$model_hex))"
+        
+        output="$output-$man$model"
+    done < <(
+        xrandr --prop | awk '
+            /[:.]/ && h {
+                man_hex = substr(hex, 17, 4)
+                model_hex = substr(hex, 23, 2) substr(hex, 21, 2)
+                print man_hex, model_hex
+                h = 0
+                hex = ""
+            }
+            h {
+                sub(/[ \t ]+/, "")
+                hex = hex $0
+            }
+            /EDID.*:/ {
+                h = 1
+            }
+        '
+    )
+
+    echo ${output:1}
+}
+
+function layout-exists
+{
+    ls -a $LAYOUTS_DIR | grep ".$1.layout"
+}
+
+function create-layout
+{
+    echo "creating layout $1"
+    arandr
+}
+
+function apply-layout
+{
+    cat "$LAYOUTS_DIR/.$1.layout" > "$CURRENT_FILE"
+    bash "$LAYOUTS_DIR/.$1.layout"
+    nitrogen --restore
+}
+
+connected_layout="$(get-connected-layout)"
+
+if [[ $# -eq 1 ]];then 
+    if [ $1 == "-s" ] || [ $1 == "--save" ]; then
+        cat "$CURRENT_FILE" > "$LAYOUTS_DIR/.$connected_layout.layout" &&
+        apply-layout "$connected_layout"
+    elif [ $1 == "-m" ] || [ $1 == "--modify" ]; then
+        if [ $(layout-exists "$connected_layout") ]; then        
+            cat "$LAYOUTS_DIR/.$connected_layout.layout" > "$CURRENT_FILE"
+            arandr "$CURRENT_FILE"
+        else
+            touch "$CURRENT_FILE"
+            arandr
+        fi
+    fi
+elif [[ $# -ne 0 ]]; then
+    echo "Too many arguments"
+    exit
+else
+    if [ $(layout-exists "$connected_layout") ]; then
+        apply-layout "$connected_layout"
+    else
+        touch "$CURRENT_FILE"
+        arandr
+    fi
+fi
