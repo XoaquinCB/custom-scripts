@@ -77,8 +77,20 @@ function layout-exists
 
 function create-layout
 {
-    echo "creating layout $1"
+    touch "$CURRENT_FILE"
     arandr
+}
+
+function modify-layout
+{
+    cat "$LAYOUTS_DIR/.$connected_layout.layout" > "$CURRENT_FILE"
+    arandr "$CURRENT_FILE"
+}
+
+function save-layout
+{
+    cat "$CURRENT_FILE" > "$LAYOUTS_DIR/.$connected_layout.layout" &&
+    apply-layout "$connected_layout"
 }
 
 function apply-layout
@@ -90,27 +102,29 @@ function apply-layout
 
 connected_layout="$(get-connected-layout)"
 
-if [[ $# -eq 1 ]];then 
-    if [ $1 == "-s" ] || [ $1 == "--save" ]; then
-        cat "$CURRENT_FILE" > "$LAYOUTS_DIR/.$connected_layout.layout" &&
-        apply-layout "$connected_layout"
-    elif [ $1 == "-m" ] || [ $1 == "--modify" ]; then
-        if [ $(layout-exists "$connected_layout") ]; then        
-            cat "$LAYOUTS_DIR/.$connected_layout.layout" > "$CURRENT_FILE"
-            arandr "$CURRENT_FILE"
-        else
-            touch "$CURRENT_FILE"
-            arandr
-        fi
-    fi
-elif [[ $# -ne 0 ]]; then
-    echo "Too many arguments"
-    exit
-else
-    if [ $(layout-exists "$connected_layout") ]; then
+if [[ $# -eq 0 ]]
+then
+    if [ $(layout-exists "$connected_layout") ]
+    then
         apply-layout "$connected_layout"
     else
-        touch "$CURRENT_FILE"
-        arandr
+        create-layout
     fi
+elif [[ $# -eq 1 ]]
+then
+    if [ $1 == "-s" ] || [ $1 == "--save" ]
+    then
+        save-layout
+    elif [ $1 == "-m" ] || [ $1 == "--modify" ]
+    then
+        if [ $(layout-exists "$connected_layout") ]
+        then        
+            modify-layout
+        else
+            create-layout
+        fi
+    fi
+else
+    echo "Too many arguments"
+    exit 1
 fi
