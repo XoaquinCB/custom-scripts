@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Required packages:
+#   pacmd
+#
+# Description:
+#   Sets the audio output depending on whether headphones are plugged in or not.
+#
+# Usage:
+#   audio
+#     Checks whether there are headphones plugged in, and then sets the audio
+#     output accordingly from a list of outputs.
+#
+#   audio <-l|--list>
+#     Lists the available audio outputs to put in the arrays below.
+
+#####################################################################################
+#
+#   Modify the following lines to contain the desired outputs in order of preference.
+#   To get a list of available outputs, run this script with "audio --list"
+
+# When headphones are plugged in:
+HEADPHONE_OUTPUTS=(
+    "alsa_output.pci-0000_00_1b.0.analog-stereo.equalizer"
+    "alsa_output.pci-0000_00_03.0.hdmi-stereo"
+)
+
+# When headphones are not plugged in:
+SPEAKER_OUTPUTS=(
+    "alsa_output.pci-0000_00_03.0.hdmi-stereo"
+    "alsa_output.pci-0000_00_1b.0.analog-stereo"
+)
+
+#####################################################################################
+
+function list-available
+{
+    echo "$(pacmd list-sinks | grep name: | awk '{gsub(/</,""); gsub(/>/, ""); print $2}')"
+}
+
+headset-connected()
+{
+  grep -A4 -ri 'Headphone Playback Switch' /proc/asound/card*/* | \
+    grep "Amp-Out vals.*0x00 0x00" -q
+}
+
+set-output()
+{
+    [[ "$(pacmd set-default-sink $1)" == "" ]]
+}
+
+[[ "$1" == "--list" ]] || [[ "$1" == "-l" ]] && (list-available & exit)
+
+headset-connected && \
+    for output in ${HEADPHONE_OUTPUTS[@]}; do
+        set-output "$output" && exit 0
+    done
+
+for output in ${SPEAKER_OUTPUTS[@]}; do
+    set-output "$output" && exit 0
+done
