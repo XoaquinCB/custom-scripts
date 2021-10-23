@@ -1,12 +1,31 @@
 #!/bin/bash
 
+# Required packages:
+#   dunst
+#
+# Description:
+#   Shows a dunst notification when the battery
+#   has 15 minutes remaining.
+#   Run this script on startup.
+#
+# Usage:
+#   low-battery-warn
+
 while true; do
     
-    BATTINFO=`acpi -b`
-    if [[ `echo $BATTINFO | grep Discharging` && `echo $BATTINFO | cut -f 5 -d " "` < 00:15:00 ]] ; then
-        DISPLAY=:0.0 /usr/bin/notify-send "Low battery\!" "$BATTINFO"
+    REMAINING=$(acpi -b | cut -f 5 -d " ")
+    
+    if [ $REMAINING != "" ] && [[ $REMAINING < 00:15:00 ]] ; then
+        dunstify \
+            -u crit
+            -h string:x-canonical-private-synchronous:battery \
+            -i "/usr/share/icons/breath2-dark/status/24/battery-020.svg" \
+            "Low battery!" \
+            "$REMAINING remaining"
+        
+        sleep 4m
     fi
     
-    sleep 60
+    sleep 1m
     
 done
