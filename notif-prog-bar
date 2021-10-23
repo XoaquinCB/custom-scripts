@@ -12,14 +12,14 @@
 
 if [[ "$1" == "vol" ]]; then
     SINK_NAME=$(pacmd stat | awk -F": " '/^Default sink name: /{print $2}')
-    VOL=$(pacmd list-sinks |
-        awk '/^\s+name: /{indefault = $2 == "<'$SINK_NAME'>"}
-            /^\s+volume: / && indefault {print $5; exit}' |
-        awk -F"%" '{print $1}')
-    dunstify -u low -h string:x-canonical-private-synchronous:volume "Volume: " -h int:value:"$VOL"
+    VOL=$(pacmd list-sinks | awk '/^\s+name: /{indefault = $2 == "<'$SINK_NAME'>"}/^\s+volume: / && indefault {print $5; exit}' | awk -F"%" '{print $1}')
+    MUTED=$(pacmd list-sinks | awk '/^\s+name: /{indefault = $2 == "<'$SINK_NAME'>"}/^\s+muted: / && indefault {print $2; exit}' | awk -F"%" '{print $1}')
+    [ $MUTED = "no" ] && ICON="/usr/share/icons/breath2-dark/status/24/audio-on.svg" || ICON="/usr/share/icons/breath2-dark/status/24/audio-volume-muted.svg"
+    dunstify -u low -h string:x-canonical-private-synchronous:volume "Volume: " -h int:value:"$VOL" -i "$ICON"
 elif [[ "$1" == "bright" ]]; then
     BRIGHT="$(xbacklight)"
-    dunstify -u low -h string:x-canonical-private-synchronous:brightness "Brightness: " -h int:value:"$BRIGHT"
+    ICON="/usr/share/icons/breath2-dark/status/24/redshift-status-on.svg"
+    dunstify -u low -h string:x-canonical-private-synchronous:brightness "Brightness: " -h int:value:"$BRIGHT" -i "$ICON"
 else
     echo "'$1'" is not a valid option.
 fi
