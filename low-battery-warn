@@ -17,7 +17,7 @@ while true; do
     
     if [ $REMAINING != "" ] && [[ $REMAINING < 00:15:00 ]] ; then
         dunstify \
-            -u crit
+            -u crit \
             -h string:x-canonical-private-synchronous:battery \
             -i "/usr/share/icons/breath2-dark/status/24/battery-020.svg" \
             "Low battery!" \
