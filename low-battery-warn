@@ -16,7 +16,7 @@ while true; do
     BAT_INFO=$(acpi -b)
     REMAINING=$(echo $BAT_INFO | cut -f 5 -d " ")
     
-    if (echo $BAT_INFO | grep "Discharging") && [[ $REMAINING < 40:15:00 ]] ; then
+    if (echo $BAT_INFO | grep "Discharging") && [[ $REMAINING < 0:15:00 ]] ; then
         dunstify \
             -u crit \
             -h string:x-canonical-private-synchronous:battery \
